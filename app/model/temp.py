@@ -13,9 +13,10 @@ import numpy as np
 ## info
 sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(client_id="49a38597365d450c82bde54db724a4df", client_secret="676bfa0ea98549acb92c38e0573d5354"))
 url_music_recommendation = f"https://musicrecommendationtst.azurewebsites.net/musicrecommendation"
-url_token = "https://musicrecommendationtst.azurewebsites.net/token"
+url_token_music = "https://musicrecommendationtst.azurewebsites.net/token"
+url_token_movie = "https://movierecommender123.azurewebsites.net/login"
 url_movie_quotes = "https://api.quodb.com/search/"
-url_movie_recommendation = "https://movierecommender123.azurewebsites.net/movierecommendation"
+url_movie_recommendation = "https://movierecommender123.azurewebsites.net/movierecommendation/"
 url_lyrics = "https://api.musixmatch.com/ws/1.1/"
 musicxmatch_api_key = "&apikey=c4e87d641624b64b2a8a549c0fa34f9d"
 musicxmatch_api_key2 = "&apikey=ba16e7eb0f095325645ab93d48555392" ##backup
@@ -73,8 +74,8 @@ def get_music_mood(songlist):
     # metadata_cols = ['song_recommendations', 'mood based on songs'] 
     user_result = {}
     url = url_music_recommendation
-    token_type = generate_token(url_token)[1]
-    access_token = generate_token(url_token)[0]
+    token_type = generate_token(url_token_music)[1]
+    access_token = generate_token(url_token_music)[0]
     headers = {
         "accept": "application/json",
         "Authorization": token_type + " " + access_token, 
@@ -213,23 +214,22 @@ def get_quotes(mood, target):
 
 def get_movie_recommendation(film):
     url = url_movie_recommendation
-    token_type = generate_token(url_token)[1]
-    access_token = generate_token(url_token)[0]
+    token_type = generate_token(url_token_movie)[1]
+    access_token = generate_token(url_token_movie)[0]
     headers = {
         "accept": "application/json",
         "Authorization": token_type + " " + access_token, 
         "Content-Type": "application/json"
     }
     params = {
-        "name": film,
+        "judul_film": film,
     }
     response = request("POST", url, headers=headers, json=params)
     res = response.json()
-
     filmList = list(res['Title'].values())
     return filmList
 
-
+# get_movie_recommendation("Avatar")
 
 # get_music_valence()
 # word_cloud_song_lyrics()
