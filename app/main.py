@@ -10,12 +10,12 @@ from tortoise.models import Model
 from pydantic import BaseModel
 import pickle
 import pandas as pd
-# from app.model.musicmodel import *
 from model.musicmodel import *
 from model.temp import *
+from models.serviceModels import babyName
+import babygenerator
 
-app = FastAPI()
-
+app = FastAPI(title="Music and Movie Recommender Integration System & Technology 2022/2023")
 JWT_SECRET = 'myjwtsecret'
 
 class User(Model):
@@ -44,6 +44,12 @@ async def authenticate_user(username: str, password: str):
         return False
     return user 
 
+@app.post('/users', response_model=User_Pydantic)
+async def create_user(user: UserIn_Pydantic):
+    user_obj = User(username=user.username, password_hash=bcrypt.hash(user.password_hash))
+    await user_obj.save()
+    return await User_Pydantic.from_tortoise_orm(user_obj)
+        
 @app.post('/token')
 async def generate_token(form_data: OAuth2PasswordRequestForm = Depends()):
     user = await authenticate_user(form_data.username, form_data.password)
@@ -71,14 +77,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
         )
 
     return await User_Pydantic.from_tortoise_orm(user)
-
-
-@app.post('/users', response_model=User_Pydantic)
-async def create_user(user: UserIn_Pydantic):
-    user_obj = User(username=user.username, password_hash=bcrypt.hash(user.password_hash))
-    await user_obj.save()
-    return await User_Pydantic.from_tortoise_orm(user_obj)
-             
+     
 
 async def recom(music: musicPydantic, token: str = Depends(oauth2_scheme)):
     payload = jwt.decode(token, JWT_SECRET, algorithms=['HS256'])
@@ -108,9 +107,26 @@ async def generate_quotes_movie(item: musicPydantic = Depends(recom)):
     songs = get_quotes(get_music_mood([{"name" : item.name, "year" : item.year}])['mood'], "all")
     return songs
 
+@app.post("/generate_all")
+async def generate_all(item: musicPydantic = Depends(recom)):
+    all = get_all([{"name" : item.name, "year" : item.year}], "mood")
+    return all
+
+@app.post("/generate_all_by_lyrics")
+async def generate_all_by_lyrics(item: musicPydantic = Depends(recom)):
+    all = get_all([{"name" : item.name, "year" : item.year}], "lyrics")
+    return all
+
 @app.get('/users/me', response_model=User_Pydantic)
 async def get_user(user: User_Pydantic = Depends(get_current_user)):
     return user    
+
+
+@app.post('/babynamegenerator/')
+async def babynames_generator_based_on_movie_and_song(item: babyName, current_user:User = Depends(get_current_user)):
+    final_nama = babygenerator.babynameGenerator(item.jenis_kelamin, item.jumlah_huruf_minimal, item.jumlah_huruf_maksimal, item.jumlah_nama, item.judul_film, item.judul_lagu, item.tahun_lagu)
+    # result = babygenerator.babynameGenerator(item.judul_film, item.judul_lagu, item.tahun_lagu)
+    return final_nama
 
 register_tortoise(
     app, 

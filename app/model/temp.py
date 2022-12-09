@@ -18,8 +18,9 @@ url_token_movie = "https://movierecommender123.azurewebsites.net/login"
 url_movie_quotes = "https://api.quodb.com/search/"
 url_movie_recommendation = "https://movierecommender123.azurewebsites.net/movierecommendation/"
 url_lyrics = "https://api.musixmatch.com/ws/1.1/"
-musicxmatch_api_key = "&apikey=c4e87d641624b64b2a8a549c0fa34f9d"
+musicxmatch_api_key = "&apikey=811aaabaa26952f4ee07b374e8105061"
 musicxmatch_api_key2 = "&apikey=ba16e7eb0f095325645ab93d48555392" ##backup
+musicxmatch_api_key3 = "&apikey=811aaabaa26952f4ee07b374e8105061"
 
 # song = str(input("Input song title: "))
 # year = int(input("Input song year: "))
@@ -128,41 +129,64 @@ def get_lyrics(song, artist):
     api_call = url_lyrics + "matcher.lyrics.get" + "?format=json&callback=callback" + "&q_artist=" + artist + "&q_track=" + song + musicxmatch_api_key
     response = request("GET", api_call)
     data = response.json()['message']['body']['lyrics']['lyrics_body']
-    if (data): 
+    if (data):
         return(data)
     else:
         print("Unfortunately we're not authorized to show these lyrics")
 
-
-def common_word_lyrics(song, year):
+def common_word_lyrics(songlist, target):
     ## error handler --> musixmatch limited the hit on free users
+    user_result = {}
     try:
+        song = songlist[0]['name']
+        year = songlist[0]['year']
         artist = find_song_artist(song, year)
         data = get_lyrics(artist[1], artist[0])
-        split_it = data.split()
+        transform = str(data)
+        split_it = transform.split()
         temp = Counter(split_it)
         most_occur = temp.most_common(6)
         words = ""
+        temp = []
+        film=''
+        films = ''
+        filmsList = []
+        quotes = ''
         for i in most_occur:
             words +=  (i[0]) + " "
         # arr = np.array(most_occur)
-        print(words)
         text_encoded = quote(words)
         url_target = url_movie_quotes + text_encoded + '?titles_per_page=10'
         response = request("GET", url_target)
         res = response.json() 
         for j in res['docs']:
             try:
-                film = str(j['title'])
+                film += str(j['title'])
+                quotes += j['phrase']
                 films = get_movie_recommendation(film)
-                print(j['phrase'])
+                filmsList.append(films)
                 temp.append(j['title'])
             except:
                 continue
             else:
-                if (film): break
+                if (films): 
+                    break
+                break
+        if (target == "only_quotes"):
+            user_result.update(quotes=quotes)
+            user_result.update(film=film)
+            print(user_result)
+            return user_result
+        if (target == "all"): 
+            user_result.update(quotes=quotes)
+            user_result.update(quotes_by_film=film)
+            user_result.update(film_recommendations=films)
+            print(user_result)
+            return user_result
     except:
-        print("I'm sorry, we can't get the data you want since Musixmatch limit their api hit per day for free users. Come back again tomorrow or you can use another endpoint: /byMood")
+        print("I'm sorry, we can't get the data you want since Musixmatch limit their api hit per day for free users. Come back again tomorrow or you can use other endpoints")
+    # else:
+    #     print("ok")
 
 def get_quotes(mood, target): 
     ## example: https://api.quodb.com/search/bright%20smile?titles_per_page=50
@@ -209,8 +233,6 @@ def get_quotes(mood, target):
         user_result.update(quotes_by_film=film)
         user_result.update(film_recommendations=films)
         return user_result
-    # print(temp)
-    # print(films)
 
 def get_movie_recommendation(film):
     url = url_movie_recommendation
@@ -229,8 +251,31 @@ def get_movie_recommendation(film):
     filmList = list(res['Title'].values())
     return filmList
 
-# get_movie_recommendation("Avatar")
+def get_all(songlist, target):
+    user_result = {}
+    first_dict = get_music_mood(songlist)['song_recommendations']
+    user_result.update(song_recommendations=first_dict)
+    second_dict = get_music_mood(songlist)['mood']
+    user_result.update(mood=second_dict)
+    if (target == 'mood'):
+        third_dict = get_quotes(second_dict, "only_quotes")
+        user_result.update(quotes=third_dict)
+        forth_dict = get_quotes(second_dict, "all")['quotes_by_film']
+        user_result.update(quotes_by_film=forth_dict)
+        fifth_dict = get_quotes(second_dict, "all")['film_recommendations']
+        user_result.update(film_recommendations=fifth_dict)
+        return user_result
+    if (target == 'lyrics'):
+        third_dict = common_word_lyrics(songlist, "only_quotes")
+        user_result.update(quotes=third_dict)
+        forth_dict = common_word_lyrics(songlist, "all")['quotes_by_film']
+        user_result.update(quotes_by_film=forth_dict)
+        fifth_dict = common_word_lyrics(songlist, "all")['film_recommendations']
+        user_result.update(film_recommendations=fifth_dict)
+    return user_result
 
+# get_movie_recommendation("Avatar")
+# common_word_lyrics([{'name': 'Say So', 'year':2019}], "all")
 # get_music_valence()
 # word_cloud_song_lyrics()
 # id = get_track_id("Doja Cat", "Say So")
