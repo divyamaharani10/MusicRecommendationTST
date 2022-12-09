@@ -30,7 +30,6 @@ def find_song(name, year):
     results = sp.search(q= 'track: {} year: {}'.format(name,year), limit=1)
     if results['tracks']['items'] == []:
         return None
-
     results = results['tracks']['items'][0]
     track_id = results['id']
     audio_features = sp.audio_features(track_id)[0]

@@ -12,6 +12,7 @@ import pickle
 import pandas as pd
 # from app.model.musicmodel import *
 from model.musicmodel import *
+from model.temp import *
 
 app = FastAPI()
 
@@ -30,7 +31,7 @@ UserIn_Pydantic = pydantic_model_creator(User, name='UserIn', exclude_readonly=T
 
 class musicItem(Model):
     name = fields.TextField(50)
-    year = fields.IntField(pk=False)
+    year = fields.IntField(pk=False, minimum=1925, maximum=2022)
 musicPydantic = pydantic_model_creator(musicItem)
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl='token')
@@ -89,6 +90,22 @@ async def recom(music: musicPydantic, token: str = Depends(oauth2_scheme)):
 @app.post("/musicrecommendation")
 async def recommendation(item: musicPydantic = Depends(recom) ):
     songs = recommend_songs([{"name" : item.name, "year" : item.year}], model)
+    return songs
+
+@app.post("/mood_generator")
+async def generate_mood(item: musicPydantic = Depends(recom)):
+    songs = get_music_mood([{"name" : item.name, "year" : item.year}])
+    return songs
+
+
+@app.post("/quotes_generator")
+async def generate_quotes(item: musicPydantic = Depends(recom)):
+    songs = get_quotes(get_music_mood([{"name" : item.name, "year" : item.year}])['mood'], "only_quotes")
+    return songs
+
+@app.post("/quotes_movie_generator")
+async def generate_quotes_movie(item: musicPydantic = Depends(recom)):
+    songs = get_quotes(get_music_mood([{"name" : item.name, "year" : item.year}])['mood'], "all")
     return songs
 
 @app.get('/users/me', response_model=User_Pydantic)
